@@ -3,7 +3,9 @@ from bs4 import BeautifulSoup
 import argparse
 from colorama import Fore, Style
 import re
+import os
 from urllib.parse import urljoin
+import time
 
 ascii_art = f"""
 {Fore.RED} __   _________           _     _    _ _   
@@ -23,7 +25,23 @@ def clean_content(text):
     clean = re.sub(r'<style.*?</style>', '', clean, flags=re.DOTALL)
     return clean
 
-def crawl(url, options, save_strings):
+def download_file(url, output_folder):
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            file_type = url.split('.')[-1]
+            folder_path = os.path.join(output_folder, file_type)
+            os.makedirs(folder_path, exist_ok=True)
+            file_name = os.path.join(folder_path, url.split('/')[-1])
+            with open(file_name, 'wb') as f:
+                f.write(response.content)
+            print(f"{Fore.CYAN}[Downloaded] {url} to {file_name}{Style.RESET_ALL}")
+        else:
+            print(f"{Fore.RED}Failed to download {url}: {response.status_code}{Style.RESET_ALL}")
+    except Exception as e:
+        print(f"{Fore.RED}Error downloading {url}: {e}{Style.RESET_ALL}")
+
+def crawl(url, options, save_strings, output_folder):
     if url in visited_urls:
         return
     visited_urls.add(url)
@@ -34,46 +52,34 @@ def crawl(url, options, save_strings):
         print(f"{Fore.WHITE}GET   --->   {url} [Response: {response.status_code}]{Style.RESET_ALL}")
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            visible_text = soup.get_text(separator='\n', strip=True)
-
-            if 'inputs' in options:
-                for input_tag in soup.find_all('input'):
-                    print(f"{Fore.YELLOW}[Input] {url} --> {input_tag}{Style.RESET_ALL}")
             if 'images' in options:
                 for img_tag in soup.find_all('img'):
                     src = img_tag.get('src')
                     if src:
                         full_url = urljoin(url, src)
-                        print(f"{Fore.MAGENTA}[Image] {url} --> {src} -> {full_url} [Response: {response.status_code}]{Style.RESET_ALL}")
-            if 'links' in options:
-                for link_tag in soup.find_all('a'):
-                    link = link_tag.get('href')
-                    if link:
-                        full_url = urljoin(url, link)
-                        print(f"{Fore.GREEN}[Link] {link} -> {full_url} [Response: {response.status_code}]{Style.RESET_ALL}")
+                        download_file(full_url, output_folder)
             if 'videos' in options:
-                video_sources = set()
                 for video_tag in soup.find_all('video'):
                     for source in video_tag.find_all('source'):
                         src = source.get('src')
-                        if src and src not in video_sources:
-                            video_sources.add(src)
+                        if src:
                             full_url = urljoin(url, src)
-                            print(f"{Fore.BLUE}[Video] {url} --> {src} -> {full_url} [Response: {response.status_code}]{Style.RESET_ALL}")
+                            download_file(full_url, output_folder)
             if 'audio' in options:
-                audio_sources = set()
                 for audio_tag in soup.find_all('audio'):
                     for source in audio_tag.find_all('source'):
                         src = source.get('src')
-                        if src and src not in audio_sources:
-                            audio_sources.add(src)
+                        if src:
                             full_url = urljoin(url, src)
-                            print(f"{Fore.CYAN}[Audio] {url} --> {src} -> {full_url} [Response: {response.status_code}]{Style.RESET_ALL}")
+                            download_file(full_url, output_folder)
 
             if save_strings:
+                visible_text = soup.get_text(separator='\n', strip=True)
                 with open('strings.txt', 'w', encoding='utf-8') as f:
                     f.write(visible_text)
 
+    except requests.exceptions.HTTPError as e:
+        print(f"{Fore.RED}HTTP Error: {e}{Style.RESET_ALL}")
     except Exception as e:
         print(f"{Fore.RED}Error fetching {url}: {e}{Style.RESET_ALL}")
 
@@ -82,6 +88,8 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--target', required=True)
     parser.add_argument('-o', '--options', required=True)
     parser.add_argument('-s', '--strings', action='store_true')
+    parser.add_argument('-d', '--download', help='Download types', default=None)
+    parser.add_argument('-w', '--output', help='Output folder for downloads', default='downloads')
     args = parser.parse_args()
 
     target_url = args.target
@@ -92,4 +100,10 @@ if __name__ == "__main__":
     print(f"{Fore.WHITE}get strings? {get_strings}{Style.RESET_ALL}")
 
     visited_urls = set()
-    crawl(target_url, options, args.strings)
+    
+    if args.download:
+        download_types = args.download.split(',')
+        crawl(target_url, options, args.strings, args.output)
+        print(f"{Fore.RED}Download completed!{Style.RESET_ALL}")
+    else:
+        crawl(target_url, options, args.strings, None)
