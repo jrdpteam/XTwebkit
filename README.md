@@ -1,6 +1,6 @@
 # XTwebkit_v1.0
 
-XTwebkit_v1.0 is a tool for scanning and downloading resources from specified websites. It allows you to extract data such as images, videos, audio, and forms, and saves them in an organized folder structure.
+XTwebkit_v1.0 is a tool for scanning and downloading resources from specified websites. It allows you to extract data such as images, videos, audio, and forms, and saves them in an organized folder structure.Designed for Kali Linux.
 
 ## Features
 
@@ -31,4 +31,4 @@ XTwebkit_v1.0 is a tool for scanning and downloading resources from specified we
 
 4. Example usage:
 
-       python XTwebkit.py -t "http://example.com" -o "images,videos,audio" -d "images,videos,audio" -w "downloaded_files"
+       python3 XTwebkit.py -t "http://example.com" -o "images,videos,audio" -d "images,videos,audio" -w "downloaded_files"
