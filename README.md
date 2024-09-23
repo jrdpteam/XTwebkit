@@ -32,3 +32,6 @@ XTwebkit_v1.0 is a tool for scanning and downloading resources from specified we
 4. Example usage:
 
        python3 XTwebkit.py -t "http://example.com" -o "images,videos,audio" -d "images,videos,audio" -w "downloaded_files"
+
+
+by JRDP Team
